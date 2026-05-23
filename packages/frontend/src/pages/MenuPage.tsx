@@ -198,7 +198,7 @@ export default function MenuPage() {
                   )}
                   <td className="px-4 py-3 text-center">
                     <span className={item.active ? 'badge-green' : 'badge-red'}>
-                      {item.active ? 'Available' : '86\'d'}
+                      {item.active ? 'Available' : 'Blocked'}
                     </span>
                   </td>
                   <td className="px-4 py-3 flex items-center justify-end gap-2">
@@ -209,9 +209,9 @@ export default function MenuPage() {
                           ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
                           : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
                       }`}
-                      title={item.active ? '86 this item (mark unavailable)' : 'Make available'}
+                      title={item.active ? 'Block this item from POS' : 'Unblock — make orderable again'}
                     >
-                      {item.active ? '86 Item' : 'Restore'}
+                      {item.active ? 'Block' : 'Unblock'}
                     </button>
                     {isManager && (
                       <button

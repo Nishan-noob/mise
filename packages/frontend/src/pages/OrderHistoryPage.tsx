@@ -140,8 +140,8 @@ export default function OrderHistoryPage() {
   });
 
   const payOrder = useMutation({
-    mutationFn: ({ id, method }: { id: number; method: string }) =>
-      api.post(`/payments/orders/${id}/pay`, { method, amount: 0 }),
+    mutationFn: ({ id, method, total }: { id: number; method: string; total: number }) =>
+      api.post(`/payments/orders/${id}/pay`, { method, amount: total }),
     onSuccess: () => {
       toast.success('Payment recorded');
       qc.invalidateQueries({ queryKey: ['orders'] });
@@ -194,7 +194,7 @@ export default function OrderHistoryPage() {
               key={order.id}
               order={order}
               onUpdateStatus={(s) => updateStatus.mutate({ id: order.id, status: s })}
-              onPay={(method) => payOrder.mutate({ id: order.id, method })}
+              onPay={(method) => payOrder.mutate({ id: order.id, method, total: parseFloat(order.total as unknown as string) })}
             />
           ))}
         </div>

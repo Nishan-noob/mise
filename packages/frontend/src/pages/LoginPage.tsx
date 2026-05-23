@@ -18,8 +18,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
-      login(res.data.data.token, res.data.data.user);
-      navigate('/pos', { replace: true });
+      const user = res.data.data.user;
+      login(res.data.data.token, user);
+      navigate(user.role === 'kitchen' ? '/kds' : '/pos', { replace: true });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Login failed';
       toast.error(msg);

@@ -13,8 +13,8 @@ router.get('/', async (_req, res: Response): Promise<void> => {
   const pool = getPool();
   const { rows } = await pool.query(`
     SELECT rt.*,
-      (SELECT id FROM orders WHERE table_id=rt.id AND status NOT IN ('paid','voided','merged') ORDER BY created_at DESC LIMIT 1) AS active_order_id,
-      (SELECT status FROM orders WHERE table_id=rt.id AND status NOT IN ('paid','voided','merged') ORDER BY created_at DESC LIMIT 1) AS active_order_status
+      (SELECT id FROM orders WHERE table_id=rt.id AND status NOT IN ('paid','voided','merged','served') ORDER BY created_at DESC LIMIT 1) AS active_order_id,
+      (SELECT status FROM orders WHERE table_id=rt.id AND status NOT IN ('paid','voided','merged','served') ORDER BY created_at DESC LIMIT 1) AS active_order_status
     FROM restaurant_tables rt WHERE rt.active=true ORDER BY rt.floor, rt.name
   `);
   res.json({ success: true, data: rows });

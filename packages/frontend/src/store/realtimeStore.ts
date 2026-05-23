@@ -117,7 +117,14 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
         const p = event.payload as WsTableStatusChangedPayload;
         set((s) => ({
           tables: s.tables.map((t) =>
-            t.id === p.table_id ? { ...t, status: p.new_status } : t
+            t.id === p.table_id
+              ? {
+                  ...t,
+                  status: p.new_status,
+                  // Clear order badge when table becomes available
+                  ...(p.new_status === 'available' ? { active_order_id: null, active_order_status: null } : {}),
+                }
+              : t
           ),
         }));
         break;

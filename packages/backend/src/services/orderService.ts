@@ -304,6 +304,15 @@ export const OrderService = {
           );
         }
 
+        // Mark all ready items as served when order is served
+        if (newStatus === 'served') {
+          await client.query(
+            `UPDATE order_items SET status='served', updated_at=NOW()
+             WHERE order_id=$1 AND status IN ('pending','accepted','in_progress','ready')`,
+            [orderId]
+          );
+        }
+
         // Deduct inventory on completion
         if (newStatus === 'paid') {
           await deductInventory(client, orderId, userId);

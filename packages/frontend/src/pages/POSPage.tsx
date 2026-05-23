@@ -40,7 +40,7 @@ export default function POSPage() {
   });
   const { data: itemsRes } = useQuery({
     queryKey: ['menu-items'],
-    queryFn: () => api.get('/menu/items?active=true').then((r) => r.data.data as MenuItem[]),
+    queryFn: () => api.get('/menu/items').then((r) => r.data.data as MenuItem[]),
   });
   const { data: tablesRes } = useQuery({
     queryKey: ['tables'],
@@ -217,20 +217,26 @@ export default function POSPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {filteredItems.map((item) => {
               const inCart = cart.find((c) => c.menu_item_id === item.id);
+              const blocked = !item.active;
               return (
                 <button
                   key={item.id}
-                  onClick={() => addToCart(item)}
-                  className={`relative card p-3 text-left transition hover:border-brand-500/50 hover:bg-gray-800 active:scale-95 ${
-                    inCart ? 'border-brand-500/40 bg-brand-500/5' : ''
+                  onClick={() => !blocked && addToCart(item)}
+                  disabled={blocked}
+                  className={`relative card p-3 text-left transition active:scale-95 ${
+                    blocked
+                      ? 'opacity-40 cursor-not-allowed'
+                      : inCart
+                      ? 'border-brand-500/40 bg-brand-500/5 hover:border-brand-500/50 hover:bg-gray-800'
+                      : 'hover:border-brand-500/50 hover:bg-gray-800'
                   }`}
                 >
                   <p className="text-sm font-semibold text-white leading-tight">{item.name}</p>
                   <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.description}</p>
-                  <p className="text-sm font-bold text-brand-400 mt-2">
-                    Rs. {parseFloat(item.price as unknown as string).toFixed(2)}
+                  <p className={`text-sm font-bold mt-2 ${blocked ? 'text-red-400' : 'text-brand-400'}`}>
+                    {blocked ? 'Blocked' : `Rs. ${parseFloat(item.price as unknown as string).toFixed(2)}`}
                   </p>
-                  {inCart && (
+                  {inCart && !blocked && (
                     <div className="absolute top-2 right-2 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
                       {inCart.quantity}
                     </div>
