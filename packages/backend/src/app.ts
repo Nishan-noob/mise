@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import fs from 'fs';
+import { getPool } from './config/database';
 import authRouter from './routes/auth';
 import menuRouter from './routes/menu';
 import ordersRouter from './routes/orders';
@@ -30,9 +31,15 @@ if (!isProd) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'mise-backend', ts: new Date().toISOString() });
+// Health check — also shows user count for diagnostics
+app.get('/health', async (_req, res) => {
+  try {
+    const pool = getPool();
+    const { rows } = await pool.query('SELECT COUNT(*)::int AS user_count FROM users');
+    res.json({ status: 'ok', service: 'mise-backend', ts: new Date().toISOString(), user_count: rows[0].user_count });
+  } catch {
+    res.json({ status: 'ok', service: 'mise-backend', ts: new Date().toISOString(), user_count: 'db_error' });
+  }
 });
 
 // Routes
