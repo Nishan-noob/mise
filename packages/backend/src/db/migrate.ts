@@ -2,7 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { getPool } from '../config/database';
 
-const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
+// In dev (tsx): __dirname = src/db/ → migrations/ is right here
+// In prod (compiled): __dirname = dist/db/ → fall back to src/db/migrations/
+const MIGRATIONS_DIR = fs.existsSync(path.join(__dirname, 'migrations'))
+  ? path.join(__dirname, 'migrations')
+  : path.join(__dirname, '../../src/db/migrations');
 
 export async function runMigrations() {
   const pool = getPool();

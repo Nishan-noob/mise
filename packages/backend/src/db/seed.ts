@@ -8,10 +8,10 @@ export async function runSeed() {
 
   try {
     console.log('[SEED] Running seed file...');
-    const sql = fs.readFileSync(
-      path.join(__dirname, 'migrations', '002_seed.sql'),
-      'utf8'
-    );
+    const migrationsDir = fs.existsSync(path.join(__dirname, 'migrations'))
+      ? path.join(__dirname, 'migrations')
+      : path.join(__dirname, '../../src/db/migrations');
+    const sql = fs.readFileSync(path.join(migrationsDir, '002_seed.sql'), 'utf8');
     await client.query(sql);
     console.log('[SEED] ✓ Seed data applied');
   } finally {
