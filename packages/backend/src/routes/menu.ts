@@ -153,4 +153,31 @@ router.patch('/items/:id/availability', requireRole('admin', 'manager', 'kitchen
   broadcast<WsMenuItemUpdatedPayload>('menu:item_updated', { item: rows[0] });
 });
 
+// DELETE /api/menu/items/:id (admin/manager — hard delete; rejects if item has order history)
+router.delete('/items/:id', requireRole('admin', 'manager'), async (req, res: Response): Promise<void> => {
+  const pool = getPool();
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM menu_items WHERE id=$1 RETURNING id',
+      [id]
+    );
+    if (!rows[0]) {
+      res.status(404).json({ success: false, error: 'Item not found' });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const pg = err as { code?: string };
+    if (pg.code === '23503') {
+      res.status(409).json({
+        success: false,
+        error: 'Item has order history and cannot be deleted. Block it instead.',
+      });
+      return;
+    }
+    throw err;
+  }
+});
+
 export default router;

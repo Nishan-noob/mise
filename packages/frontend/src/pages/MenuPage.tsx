@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { MenuItem, MenuCategory } from '@mise/shared';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { UtensilsCrossed, Plus, Edit2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { UtensilsCrossed, Plus, Edit2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 interface EditForm {
@@ -26,6 +26,7 @@ export default function MenuPage() {
   const [showInactive, setShowInactive] = useState(true);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
 
   const { data: categoriesRes } = useQuery({
@@ -82,6 +83,22 @@ export default function MenuPage() {
       setForm(EMPTY_FORM);
     },
     onError: () => toast.error('Failed to create item'),
+  });
+
+  // Delete item (manager only)
+  const deleteItem = useMutation({
+    mutationFn: (id: number) => api.delete(`/menu/items/${id}`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['menu-items-all'] });
+      qc.invalidateQueries({ queryKey: ['menu-items'] });
+      toast.success('Item deleted');
+      setDeleteConfirm(null);
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { error?: string } } };
+      toast.error(e?.response?.data?.error ?? 'Failed to delete item');
+      setDeleteConfirm(null);
+    },
   });
 
   function openEdit(item: MenuItem) {
@@ -220,6 +237,28 @@ export default function MenuPage() {
                         title="Edit item"
                       >
                         <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {isManager && (
+                      <button
+                        onClick={() => {
+                          if (deleteConfirm === item.id) {
+                            deleteItem.mutate(item.id);
+                          } else {
+                            setDeleteConfirm(item.id);
+                            setTimeout(() => setDeleteConfirm((cur) => (cur === item.id ? null : cur)), 3000);
+                          }
+                        }}
+                        className={`p-1.5 rounded-lg transition ${
+                          deleteConfirm === item.id
+                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                            : 'text-gray-500 hover:text-red-400 hover:bg-gray-700'
+                        }`}
+                        title={deleteConfirm === item.id ? 'Click again to confirm delete' : 'Delete item'}
+                      >
+                        {deleteConfirm === item.id
+                          ? <span className="text-xs font-semibold px-1">Sure?</span>
+                          : <Trash2 className="w-4 h-4" />}
                       </button>
                     )}
                   </td>
