@@ -17,7 +17,7 @@
 
 **mise** eliminates order handover delays and kitchen miscommunication by keeping every station — front-of-house, kitchen, and cashier — in real-time sync via WebSockets.
 
-[Features](#features) · [Quick Start](#quick-start) · [Architecture](#architecture) · [API Reference](#api-reference) · [Deployment](#deployment) · [Roadmap](#roadmap)
+[Features](#features) · [Quick Start](#quick-start) · [Architecture](#architecture) · [API Reference](#api-reference) · [Deployment](#deployment) · [Live Demo](#live-demo) · [Roadmap](#roadmap)
 
 </div>
 
@@ -27,7 +27,7 @@
 
 | Module | Highlights |
 |--------|-----------|
-| 🛒 **POS** | Dine-in / takeaway / delivery orders · Item modifiers & notes · Quantity editing · Discount, tax, service charge · Split & merge tickets · Blocked items shown as disabled |
+| 🛒 **POS** | Dine-in / takeaway / delivery orders · Item modifiers & notes · Quantity editing · Discount, tax, service charge · Split & merge tickets · Multiple open orders per table · Blocked items shown as disabled · INR (Rs.) currency |
 | 👨‍🍳 **Kitchen Display (KDS)** | Live order tickets per station (grill / fry / bar / cold / pastry) · Status pipeline: New → Accepted → In Progress → Ready → Served · Elapsed-time display with priority alerts |
 | ⚡ **Real-Time Engine** | WebSocket events for every state change · Snapshot resync on reconnect · Live menu block propagation · Offline-safe draft order queue |
 | 📦 **Inventory** | Ingredient-level stock tracking · Auto-deduction on order completion · Low-stock alerts via WebSocket push |
@@ -52,6 +52,7 @@ mise/
 │   ├── ARCHITECTURE.md
 │   └── INTERVIEW_PREP.md
 ├── docker-compose.yml
+├── railway.toml         # Railway / Render deployment config
 └── README.md
 ```
 
@@ -73,7 +74,7 @@ mise/
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - PostgreSQL 14+ (or Docker)
 
 ### 1. Clone & Install
@@ -218,12 +219,72 @@ packages/
         └── pages/
             ├── LoginPage.tsx
             ├── POSPage.tsx
-            ├── KDSPage.tsx            ├── MenuPage.tsx            ├── TablesPage.tsx
+            ├── KDSPage.tsx
+            ├── MenuPage.tsx
+            ├── TablesPage.tsx
             ├── InventoryPage.tsx
             ├── AnalyticsPage.tsx
             ├── OrderHistoryPage.tsx
             └── UsersPage.tsx
 ```
+
+---
+
+## API Reference
+
+| Route prefix | Methods | Description |
+|-------------|---------|-------------|
+| `/api/auth` | POST, GET | Login · Get current user |
+| `/api/menu/categories` | GET, POST, PATCH | Menu categories |
+| `/api/menu/items` | GET, POST, PATCH, DELETE | Menu items · Availability toggle |
+| `/api/orders` | GET, POST, PATCH | Order CRUD · Status updates · Add items · Split & merge |
+| `/api/orders/:id/items/:itemId/status` | PATCH | Individual item status (KDS pipeline) |
+| `/api/tables` | GET, POST, PATCH | Table management · Status updates |
+| `/api/inventory` | GET, POST, PATCH | Stock levels · Restock · Transactions |
+| `/api/analytics` | GET | Sales summary · Item performance · Hourly trends · CSV export |
+| `/api/users` | GET, POST, PATCH | User management (admin only) |
+| `/api/shifts` | GET, POST, PATCH | Shift tracking |
+| `/api/payments` | POST, GET | Payment processing |
+
+All routes (except `POST /api/auth/login`) require `Authorization: Bearer <token>`. Role guards return `403` when the caller's role is not in the allowlist.
+
+---
+
+## Deployment
+
+### Render (current production)
+
+The app runs as a **single Render web service**: Express serves the built React SPA as static files, then handles all `/api/*` requests on the same port.
+
+1. Fork / connect the repo in [Render Dashboard](https://render.com)
+2. Set **Build Command**: `npm install && npm run build`
+3. Set **Start Command**: `node packages/backend/dist/index.js`
+4. Add environment variables: `DATABASE_URL`, `JWT_SECRET`, `NODE_ENV=production`, `CORS_ORIGIN=https://<your-render-url>`
+5. Provision a **Render PostgreSQL** database and copy the internal connection string to `DATABASE_URL`
+6. Deploy — migrations run automatically via the `postbuild` script
+
+### Railway
+
+A `railway.toml` is included in the repo root. Point Railway at the same environment variables and it will build and start identically.
+
+### Health Check
+
+`GET /health` returns `{ status: 'ok', timestamp }` — used by Render and Railway for readiness probes.
+
+---
+
+## Live Demo
+
+> **Live:** https://mise-43ln.onrender.com
+>
+> ⚠️ Runs on Render free tier — cold starts may take ~30 seconds on first load.
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@mise.local | password |
+| Manager | manager@mise.local | password |
+| Cashier | cashier@mise.local | password |
+| Kitchen | kitchen@mise.local | password |
 
 ---
 
