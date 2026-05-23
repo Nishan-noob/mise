@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Order, OrderStatus } from '@mise/shared';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { ClipboardList, CheckCircle, XCircle, Printer } from 'lucide-react';
 import { formatDistanceToNow, parseISO, format } from 'date-fns';
+import { useRealtimeStore } from '../store/realtimeStore';
+
+const fmtLabel = (s: string) =>
+  s.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
 const PRINTABLE_STATUSES: OrderStatus[] = ['open', 'in_progress', 'ready', 'served', 'paid'];
 
@@ -109,6 +113,12 @@ const STATUS_BADGE: Record<string, string> = {
 export default function OrderHistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const qc = useQueryClient();
+  const openOrders = useRealtimeStore((s) => s.openOrders);
+
+  // Refetch whenever live order state changes
+  useEffect(() => {
+    qc.invalidateQueries({ queryKey: ['orders'] });
+  }, [openOrders, qc]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['orders', statusFilter],
@@ -159,7 +169,7 @@ export default function OrderHistoryPage() {
                 statusFilter === s ? 'bg-brand-500 text-white' : 'bg-gray-800 text-gray-400'
               }`}
             >
-              {s || 'All'}
+              {s ? fmtLabel(s) : 'All'}
             </button>
           ))}
         </div>
@@ -213,7 +223,7 @@ function OrderRow({
       >
         <div className="flex-1 flex items-center gap-3 flex-wrap min-w-0">
           <span className="text-base font-bold text-white">#{order.id}</span>
-          <span className={STATUS_BADGE[order.status]}>{order.status}</span>
+          <span className={STATUS_BADGE[order.status]}>{fmtLabel(order.status)}</span>
           <span className="badge-gray capitalize">{order.type.replace('_', ' ')}</span>
           {order.table_name && <span className="text-xs text-gray-400">{order.table_name}</span>}
           {order.customer_name && <span className="text-xs text-gray-400">· {order.customer_name}</span>}
@@ -248,7 +258,7 @@ function OrderRow({
                   {item.notes && <span className="text-yellow-400 italic"> · {item.notes}</span>}
                 </span>
                 <div className="flex items-center gap-3">
-                  <span className={STATUS_BADGE[item.status]}>{item.status}</span>
+                  <span className={STATUS_BADGE[item.status]}>{fmtLabel(item.status)}</span>
                   <span className="text-gray-400">${(parseFloat(item.unit_price as unknown as string) * item.quantity).toFixed(2)}</span>
                 </div>
               </div>
@@ -284,7 +294,7 @@ function OrderRow({
                 Mark Paid (Card)
               </button>
             )}
-            {['open', 'in_progress', 'ready'].includes(order.status) && (
+            {order.status === 'open' && (
               <button
                 onClick={() => onUpdateStatus('voided')}
                 className="btn-danger text-xs px-3 py-2"

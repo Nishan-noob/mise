@@ -16,6 +16,11 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function DefaultRedirect() {
+  const user = useAuthStore((s) => s.user);
+  return <Navigate to={user?.role === 'kitchen' ? '/kds' : '/pos'} replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -29,7 +34,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/pos" replace />} />
+          <Route index element={<DefaultRedirect />} />
           <Route path="pos" element={<POSPage />} />
           <Route path="kds" element={<KDSPage />} />
           <Route path="tables" element={<TablesPage />} />

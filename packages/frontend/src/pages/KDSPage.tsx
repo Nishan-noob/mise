@@ -84,7 +84,8 @@ function ItemStatusBadge({ status }: { status: OrderItemStatus }) {
     served: 'badge-gray',
     voided: 'badge-red',
   };
-  return <span className={map[status]}>{status.replace('_', ' ')}</span>;
+  const label = status.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return <span className={map[status]}>{label}</span>;
 }
 
 export default function KDSPage() {
@@ -172,9 +173,13 @@ export default function KDSPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {visibleOrders.map((order) => {
               const stationItems = getStationItems(order);
-              const allReady = stationItems
-                .filter((i) => i.status !== 'voided')
-                .every((i) => i.status === 'ready' || i.status === 'served');
+              const nonVoided = stationItems.filter((i) => i.status !== 'voided');
+              const allReady = nonVoided.length > 0 && nonVoided.every(
+                (i) => i.status === 'ready' || i.status === 'served'
+              );
+              const allStarted = !allReady && nonVoided.length > 0 && nonVoided.every(
+                (i) => i.status === 'in_progress' || i.status === 'ready' || i.status === 'served'
+              );
 
               return (
                 <KDSTicket
@@ -182,11 +187,19 @@ export default function KDSPage() {
                   order={order}
                   stationItems={stationItems}
                   allReady={allReady}
+                  allStarted={allStarted}
                   onItemAdvance={(itemId, newStatus) => {
                     updateItemStatus.mutate({
                       orderId: order.id,
                       itemId,
                       status: newStatus,
+                    });
+                  }}
+                  onItemReject={(itemId) => {
+                    updateItemStatus.mutate({
+                      orderId: order.id,
+                      itemId,
+                      status: 'voided',
                     });
                   }}
                   onOrderComplete={() => {
@@ -209,11 +222,13 @@ interface KDSTicketProps {
   order: Order;
   stationItems: OrderItem[];
   allReady: boolean;
+  allStarted: boolean;
   onItemAdvance: (itemId: number, newStatus: OrderItemStatus) => void;
+  onItemReject: (itemId: number) => void;
   onOrderComplete: () => void;
 }
 
-function KDSTicket({ order, stationItems, allReady, onItemAdvance, onOrderComplete }: KDSTicketProps) {
+function KDSTicket({ order, stationItems, allReady, allStarted, onItemAdvance, onItemReject, onOrderComplete }: KDSTicketProps) {
   const borderColor = allReady
     ? 'border-emerald-500/60'
     : order.status === 'in_progress'
@@ -280,7 +295,15 @@ function KDSTicket({ order, stationItems, allReady, onItemAdvance, onOrderComple
                     onClick={() => onItemAdvance(item.id, next)}
                     className="mt-2 w-full py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 transition text-white"
                   >
-                    Mark {next.replace('_', ' ')} →
+                    Mark {next.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} →
+                  </button>
+                )}
+                {item.status !== 'served' && (
+                  <button
+                    onClick={() => onItemReject(item.id)}
+                    className="mt-1 w-full py-1 rounded-lg text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 transition text-red-400"
+                  >
+                    Reject Item
                   </button>
                 )}
               </div>
@@ -298,10 +321,20 @@ function KDSTicket({ order, stationItems, allReady, onItemAdvance, onOrderComple
             <CheckCircle2 className="w-4 h-4" />
             {order.status === 'ready' ? 'Mark Served' : 'All Ready!'}
           </button>
+        ) : allStarted ? (
+          <button
+            onClick={() => {
+              stationItems
+                .filter((i) => i.status === 'in_progress')
+                .forEach((i) => onItemAdvance(i.id, 'ready'));
+            }}
+            className="w-full btn-success text-xs py-2"
+          >
+            Mark All Ready
+          </button>
         ) : (
           <button
             onClick={() => {
-              // Mark all pending/accepted items to in_progress at once
               stationItems
                 .filter((i) => i.status === 'pending' || i.status === 'accepted')
                 .forEach((i) => onItemAdvance(i.id, 'in_progress'));

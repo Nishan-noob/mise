@@ -33,8 +33,14 @@ export default function UsersPage() {
       setForm({ name: '', email: '', password: '', role: 'cashier' });
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to create user';
-      toast.error(msg);
+      const data = (err as { response?: { data?: { error?: string; details?: { fieldErrors?: Record<string, string[]> } } } })?.response?.data;
+      const fieldErrors = data?.details?.fieldErrors;
+      if (fieldErrors) {
+        const first = Object.values(fieldErrors).flat()[0];
+        toast.error(first ?? data?.error ?? 'Failed to create user');
+      } else {
+        toast.error(data?.error ?? 'Failed to create user');
+      }
     },
   });
 
@@ -128,10 +134,10 @@ export default function UsersPage() {
               <Shield className="w-5 h-5 text-brand-500" /> Create User
             </h3>
             {[
-              { label: 'Full Name', key: 'name', type: 'text' },
-              { label: 'Email', key: 'email', type: 'email' },
-              { label: 'Password', key: 'password', type: 'password' },
-            ].map(({ label, key, type }) => (
+              { label: 'Full Name', key: 'name', type: 'text', hint: '' },
+              { label: 'Email', key: 'email', type: 'email', hint: '' },
+              { label: 'Password', key: 'password', type: 'password', hint: 'Min. 8 characters' },
+            ].map(({ label, key, type, hint }) => (
               <div key={key}>
                 <label className="text-xs text-gray-400 font-medium">{label}</label>
                 <input
@@ -140,6 +146,7 @@ export default function UsersPage() {
                   value={form[key as keyof typeof form]}
                   onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 />
+                {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
               </div>
             ))}
             <div>

@@ -54,6 +54,14 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
             order,
             ...s.openOrders.filter((o) => o.id !== order.id),
           ],
+          // Mark the table as occupied with this order
+          tables: order.table_id
+            ? s.tables.map((t) =>
+                t.id === order.table_id
+                  ? { ...t, status: 'occupied', active_order_id: order.id }
+                  : t
+              )
+            : s.tables,
         }));
         break;
       }
@@ -69,12 +77,21 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
       case 'order:status_changed': {
         const p = event.payload as WsOrderStatusChangedPayload;
         const closedStatuses: OrderStatus[] = ['paid', 'voided', 'merged'];
+        const tableFreedStatuses: OrderStatus[] = ['paid', 'voided', 'served'];
         set((s) => ({
           openOrders: closedStatuses.includes(p.new_status)
             ? s.openOrders.filter((o) => o.id !== p.order_id)
             : s.openOrders.map((o) =>
                 o.id === p.order_id ? { ...o, status: p.new_status } : o
               ),
+          // Free the table in the store when order is closed/served
+          tables: tableFreedStatuses.includes(p.new_status)
+            ? s.tables.map((t) =>
+                t.active_order_id === p.order_id
+                  ? { ...t, status: 'available', active_order_id: null }
+                  : t
+              )
+            : s.tables,
         }));
         break;
       }

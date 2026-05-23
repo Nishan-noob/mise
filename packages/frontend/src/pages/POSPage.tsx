@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Minus, Trash2, Send, Search, SplitSquareVertical, Merge, X, ChevronDown } from 'lucide-react';
+import { Plus, Minus, Trash2, Send, Search, X } from 'lucide-react';
 import api from '../services/api';
 import {
   MenuItem,
@@ -10,6 +10,7 @@ import {
   OrderType,
 } from '@mise/shared';
 import toast from 'react-hot-toast';
+import { useRealtimeStore } from '../store/realtimeStore';
 
 interface CartItem {
   menu_item_id: number;
@@ -31,6 +32,10 @@ export default function POSPage() {
   const [discountPct, setDiscountPct] = useState(0);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [addToOrderId, setAddToOrderId] = useState<number | null>(null);
+
+  const { openOrders } = useRealtimeStore();
+  const addableOrders = openOrders.filter((o) => ['open', 'in_progress'].includes(o.status));
 
   const qc = useQueryClient();
 
@@ -114,10 +119,27 @@ export default function POSPage() {
 
   async function submitOrder() {
     if (!cart.length) { toast.error('Cart is empty'); return; }
-    if (orderType === 'dine_in' && !selectedTable) { toast.error('Select a table for dine-in'); return; }
 
     setSubmitting(true);
     try {
+      if (addToOrderId) {
+        // Add items to existing order
+        await api.post(`/orders/${addToOrderId}/items`, {
+          items: cart.map((c) => ({
+            menu_item_id: c.menu_item_id,
+            quantity: c.quantity,
+            notes: c.notes || null,
+            modifier_ids: c.modifier_ids,
+          })),
+        });
+        toast.success('Items added to order!');
+        setCart([]);
+        setAddToOrderId(null);
+        return;
+      }
+
+      if (orderType === 'dine_in' && !selectedTable) { toast.error('Select a table for dine-in'); return; }
+
       const body: CreateOrderRequest = {
         type: orderType,
         table_id: orderType === 'dine_in' ? selectedTable : null,
@@ -244,7 +266,28 @@ export default function POSPage() {
       <div className="w-80 xl:w-96 flex flex-col bg-gray-900 flex-shrink-0">
         {/* Order details */}
         <div className="px-4 py-4 border-b border-gray-800 space-y-3">
-          {orderType === 'dine_in' && (
+          {/* Add to existing order toggle */}
+          {addableOrders.length > 0 && (
+            <div>
+              <label className="text-xs text-gray-400 font-medium">Add to existing order</label>
+              <select
+                className="input mt-1"
+                value={addToOrderId ?? ''}
+                onChange={(e) => setAddToOrderId(Number(e.target.value) || null)}
+              >
+                <option value="">New order</option>
+                {addableOrders.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    #{o.id}{o.table_name ? ` · ${o.table_name}` : ''}{o.customer_name ? ` · ${o.customer_name}` : ''} ({o.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {!addToOrderId && (
+            <>
+              {orderType === 'dine_in' && (
             <div>
               <label className="text-xs text-gray-400 font-medium">Table</label>
               <select
@@ -287,6 +330,8 @@ export default function POSPage() {
               />
             </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* Cart items */}
@@ -375,7 +420,7 @@ export default function POSPage() {
               className="btn-primary w-full py-3 text-base"
             >
               <Send className="w-4 h-4" />
-              {submitting ? 'Sending...' : 'Send to Kitchen'}
+              {submitting ? 'Sending...' : addToOrderId ? `Add to Order #${addToOrderId}` : 'Send to Kitchen'}
             </button>
             <button
               onClick={() => setCart([])}

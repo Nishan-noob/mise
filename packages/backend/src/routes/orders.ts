@@ -9,6 +9,7 @@ import {
   WsOrderUpdatedPayload,
   WsOrderStatusChangedPayload,
   WsOrderItemStatusChangedPayload,
+  WsTableStatusChangedPayload,
 } from '@mise/shared';
 
 const router = Router();
@@ -118,6 +119,15 @@ router.patch(
       new_status: status,
       updated_by: req.user!.userId,
     });
+
+    // Broadcast table freed when order is served/voided/paid
+    if (['served', 'voided', 'paid'].includes(status) && result.order.table_id) {
+      broadcast<WsTableStatusChangedPayload>('table:status_changed', {
+        table_id: result.order.table_id,
+        old_status: 'occupied',
+        new_status: 'available',
+      });
+    }
   }
 );
 

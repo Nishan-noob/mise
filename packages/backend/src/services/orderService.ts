@@ -285,8 +285,8 @@ export const OrderService = {
         [newStatus, orderId]
       );
 
-      // Release table when order is paid/voided
-      if (['paid', 'voided'].includes(newStatus)) {
+      // Release table when order is served, paid, or voided
+      if (['paid', 'voided', 'served'].includes(newStatus)) {
         await client.query(
           `UPDATE restaurant_tables rt
            SET status='available', updated_at=NOW()
@@ -294,6 +294,15 @@ export const OrderService = {
            WHERE o.id=$1 AND rt.id=o.table_id`,
           [orderId]
         );
+
+        // Mark all non-voided items as voided when order is voided
+        if (newStatus === 'voided') {
+          await client.query(
+            `UPDATE order_items SET status='voided', updated_at=NOW()
+             WHERE order_id=$1 AND status != 'voided'`,
+            [orderId]
+          );
+        }
 
         // Deduct inventory on completion
         if (newStatus === 'paid') {
