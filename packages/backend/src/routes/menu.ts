@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { getPool } from '../config/database';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { broadcast } from '../websocket/server';
+import { WsMenuItemUpdatedPayload } from '@mise/shared';
 
 const router = Router();
 router.use(authenticate);
@@ -148,6 +150,7 @@ router.patch('/items/:id/availability', requireRole('admin', 'manager', 'kitchen
     return;
   }
   res.json({ success: true, data: rows[0] });
+  broadcast<WsMenuItemUpdatedPayload>('menu:item_updated', { item: rows[0] });
 });
 
 export default router;

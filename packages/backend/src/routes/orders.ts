@@ -159,6 +159,30 @@ router.patch(
     const updatedOrder = await OrderService.getById(orderId);
     if (updatedOrder) {
       broadcast<WsOrderUpdatedPayload>('order:updated', { order: updatedOrder });
+
+      // Auto-void order when kitchen rejects all items (all items voided)
+      const nonClosedStatuses = ['open', 'in_progress', 'ready', 'draft'];
+      if (status === 'voided' && nonClosedStatuses.includes(updatedOrder.status)) {
+        const allVoided = updatedOrder.items.every((i) => i.status === 'voided');
+        if (allVoided) {
+          const voidResult = await OrderService.updateStatus(orderId, 'voided', req.user!.userId);
+          if (voidResult) {
+            broadcast<WsOrderStatusChangedPayload>('order:status_changed', {
+              order_id: orderId,
+              old_status: voidResult.oldStatus,
+              new_status: 'voided',
+              updated_by: req.user!.userId,
+            });
+            if (voidResult.order.table_id) {
+              broadcast<WsTableStatusChangedPayload>('table:status_changed', {
+                table_id: voidResult.order.table_id,
+                old_status: 'occupied',
+                new_status: 'available',
+              });
+            }
+          }
+        }
+      }
     }
   }
 );

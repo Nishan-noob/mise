@@ -69,7 +69,12 @@ export function createWebSocketServer(server: HttpServer): WebSocketServer {
     try {
       const [open_orders, tables] = await Promise.all([
         OrderService.listOpen(),
-        getPool().query('SELECT * FROM restaurant_tables WHERE active=true ORDER BY floor, name').then(r => r.rows),
+        getPool().query(`
+          SELECT rt.*,
+            (SELECT id FROM orders WHERE table_id=rt.id AND status NOT IN ('paid','voided','merged','served') ORDER BY created_at DESC LIMIT 1) AS active_order_id,
+            (SELECT status FROM orders WHERE table_id=rt.id AND status NOT IN ('paid','voided','merged','served') ORDER BY created_at DESC LIMIT 1) AS active_order_status
+          FROM restaurant_tables rt WHERE rt.active=true ORDER BY rt.floor, rt.name
+        `).then(r => r.rows),
       ]);
 
       sendToClient<WsSnapshotPayload>(ws, 'snapshot', { open_orders, tables });

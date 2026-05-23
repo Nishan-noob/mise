@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Minus, Trash2, Send, Search } from 'lucide-react';
 import api from '../services/api';
+import { useRealtimeStore } from '../store/realtimeStore';
 import {
   MenuItem,
   MenuCategory,
@@ -33,6 +34,7 @@ export default function POSPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const qc = useQueryClient();
+  const { menuItemOverrides } = useRealtimeStore();
 
   const { data: categoriesRes } = useQuery({
     queryKey: ['menu-categories'],
@@ -48,7 +50,10 @@ export default function POSPage() {
   });
 
   const categories = categoriesRes ?? [];
-  const allItems = itemsRes ?? [];
+  // Apply live overrides from WS (e.g. kitchen blocks/unblocks items)
+  const allItems = (itemsRes ?? []).map((item) =>
+    menuItemOverrides[item.id] ? { ...item, ...menuItemOverrides[item.id] } : item
+  );
   const tables = tablesRes ?? [];
 
   const filteredItems = useMemo(() => {

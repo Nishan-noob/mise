@@ -252,6 +252,7 @@ export type WsEventType =
   | 'order_item:status_changed'
   | 'table:status_changed'
   | 'inventory:low_stock'
+  | 'menu:item_updated'
   | 'snapshot'
   | 'ping'
   | 'pong'
@@ -294,6 +295,10 @@ export interface WsTableStatusChangedPayload {
 
 export interface WsInventoryLowStockPayload {
   item: InventoryItem;
+}
+
+export interface WsMenuItemUpdatedPayload {
+  item: MenuItem;
 }
 
 export interface WsSnapshotPayload {

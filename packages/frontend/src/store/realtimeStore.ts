@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   Order,
+  MenuItem,
   RestaurantTable,
   WsEvent,
   WsOrderCreatedPayload,
@@ -9,6 +10,7 @@ import {
   WsOrderItemStatusChangedPayload,
   WsTableStatusChangedPayload,
   WsInventoryLowStockPayload,
+  WsMenuItemUpdatedPayload,
   WsSnapshotPayload,
   InventoryItem,
   OrderStatus,
@@ -18,6 +20,7 @@ interface RealtimeState {
   openOrders: Order[];
   tables: RestaurantTable[];
   lowStockItems: InventoryItem[];
+  menuItemOverrides: Record<number, MenuItem>;
   connected: boolean;
   lastSnapshot: string | null;
   // Draft orders for offline support
@@ -33,6 +36,7 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
   openOrders: [],
   tables: [],
   lowStockItems: [],
+  menuItemOverrides: {},
   connected: false,
   lastSnapshot: null,
   draftOrders: [],
@@ -137,6 +141,14 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
             item,
             ...s.lowStockItems.filter((i) => i.id !== item.id),
           ],
+        }));
+        break;
+      }
+
+      case 'menu:item_updated': {
+        const { item } = event.payload as WsMenuItemUpdatedPayload;
+        set((s) => ({
+          menuItemOverrides: { ...s.menuItemOverrides, [item.id]: item },
         }));
         break;
       }
