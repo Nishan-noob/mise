@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Minus, Trash2, Send, Search, X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Minus, Trash2, Send, Search } from 'lucide-react';
 import api from '../services/api';
 import {
   MenuItem,
@@ -10,7 +10,6 @@ import {
   OrderType,
 } from '@mise/shared';
 import toast from 'react-hot-toast';
-import { useRealtimeStore } from '../store/realtimeStore';
 
 interface CartItem {
   menu_item_id: number;
@@ -32,10 +31,6 @@ export default function POSPage() {
   const [discountPct, setDiscountPct] = useState(0);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [addToOrderId, setAddToOrderId] = useState<number | null>(null);
-
-  const { openOrders } = useRealtimeStore();
-  const addableOrders = openOrders.filter((o) => ['open', 'in_progress'].includes(o.status));
 
   const qc = useQueryClient();
 
@@ -119,26 +114,10 @@ export default function POSPage() {
 
   async function submitOrder() {
     if (!cart.length) { toast.error('Cart is empty'); return; }
+    if (orderType === 'dine_in' && !selectedTable) { toast.error('Select a table for dine-in'); return; }
 
     setSubmitting(true);
     try {
-      if (addToOrderId) {
-        // Add items to existing order
-        await api.post(`/orders/${addToOrderId}/items`, {
-          items: cart.map((c) => ({
-            menu_item_id: c.menu_item_id,
-            quantity: c.quantity,
-            notes: c.notes || null,
-            modifier_ids: c.modifier_ids,
-          })),
-        });
-        toast.success('Items added to order!');
-        setCart([]);
-        setAddToOrderId(null);
-        return;
-      }
-
-      if (orderType === 'dine_in' && !selectedTable) { toast.error('Select a table for dine-in'); return; }
 
       const body: CreateOrderRequest = {
         type: orderType,
@@ -171,6 +150,7 @@ export default function POSPage() {
       setSubmitting(false);
     }
   }
+
 
   return (
     <div className="flex h-full">
@@ -248,7 +228,7 @@ export default function POSPage() {
                   <p className="text-sm font-semibold text-white leading-tight">{item.name}</p>
                   <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.description}</p>
                   <p className="text-sm font-bold text-brand-400 mt-2">
-                    ${parseFloat(item.price as unknown as string).toFixed(2)}
+                    Rs. {parseFloat(item.price as unknown as string).toFixed(2)}
                   </p>
                   {inCart && (
                     <div className="absolute top-2 right-2 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
@@ -266,28 +246,7 @@ export default function POSPage() {
       <div className="w-80 xl:w-96 flex flex-col bg-gray-900 flex-shrink-0">
         {/* Order details */}
         <div className="px-4 py-4 border-b border-gray-800 space-y-3">
-          {/* Add to existing order toggle */}
-          {addableOrders.length > 0 && (
-            <div>
-              <label className="text-xs text-gray-400 font-medium">Add to existing order</label>
-              <select
-                className="input mt-1"
-                value={addToOrderId ?? ''}
-                onChange={(e) => setAddToOrderId(Number(e.target.value) || null)}
-              >
-                <option value="">New order</option>
-                {addableOrders.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    #{o.id}{o.table_name ? ` · ${o.table_name}` : ''}{o.customer_name ? ` · ${o.customer_name}` : ''} ({o.status})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {!addToOrderId && (
-            <>
-              {orderType === 'dine_in' && (
+          {orderType === 'dine_in' && (
             <div>
               <label className="text-xs text-gray-400 font-medium">Table</label>
               <select
@@ -296,13 +255,11 @@ export default function POSPage() {
                 onChange={(e) => setSelectedTable(Number(e.target.value) || null)}
               >
                 <option value="">Select table</option>
-                {tables
-                  .filter((t) => t.status === 'available')
-                  .map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} (cap. {t.capacity})
-                    </option>
-                  ))}
+                {tables.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.status === 'occupied' ? 'Occupied' : t.status === 'available' ? 'Available' : t.status}) · cap. {t.capacity}
+                  </option>
+                ))}
               </select>
             </div>
           )}
@@ -330,8 +287,6 @@ export default function POSPage() {
               />
             </div>
           </div>
-            </>
-          )}
         </div>
 
         {/* Cart items */}
@@ -347,7 +302,7 @@ export default function POSPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-white truncate">{item.name}</p>
-                    <p className="text-xs text-brand-400">${item.unit_price.toFixed(2)} ea</p>
+                    <p className="text-xs text-brand-400">Rs. {item.unit_price.toFixed(2)} ea</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -379,7 +334,7 @@ export default function POSPage() {
                     onChange={(e) => updateNotes(item.menu_item_id, e.target.value)}
                   />
                   <span className="text-sm font-bold text-white ml-2">
-                    ${(item.unit_price * item.quantity).toFixed(2)}
+                    Rs. {(item.unit_price * item.quantity).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -393,25 +348,25 @@ export default function POSPage() {
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-gray-400">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>Rs. {subtotal.toFixed(2)}</span>
               </div>
               {discountPct > 0 && (
                 <div className="flex justify-between text-green-400">
                   <span>Discount ({discountPct}%)</span>
-                  <span>-${discountAmt.toFixed(2)}</span>
+                  <span>-Rs. {discountAmt.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-gray-400">
                 <span>Service ({SERVICE_PCT}%)</span>
-                <span>${serviceAmt.toFixed(2)}</span>
+                <span>Rs. {serviceAmt.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-gray-400">
                 <span>Tax ({TAX_PCT}%)</span>
-                <span>${taxAmt.toFixed(2)}</span>
+                <span>Rs. {taxAmt.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-white font-bold text-base pt-1.5 border-t border-gray-700">
                 <span>Total</span>
-                <span className="text-brand-400">${total.toFixed(2)}</span>
+                <span className="text-brand-400">Rs. {total.toFixed(2)}</span>
               </div>
             </div>
             <button
@@ -420,7 +375,7 @@ export default function POSPage() {
               className="btn-primary w-full py-3 text-base"
             >
               <Send className="w-4 h-4" />
-              {submitting ? 'Sending...' : addToOrderId ? `Add to Order #${addToOrderId}` : 'Send to Kitchen'}
+              {submitting ? 'Sending...' : 'Send to Kitchen'}
             </button>
             <button
               onClick={() => setCart([])}

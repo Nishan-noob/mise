@@ -130,4 +130,24 @@ router.patch('/items/:id', requireRole('admin', 'manager'), async (req, res: Res
   res.json({ success: true, data: rows[0] });
 });
 
+// PATCH /api/menu/items/:id/availability (kitchen + manager + admin can toggle active)
+router.patch('/items/:id/availability', requireRole('admin', 'manager', 'kitchen'), async (req, res: Response): Promise<void> => {
+  const pool = getPool();
+  const { id } = req.params;
+  const { active } = req.body;
+  if (typeof active !== 'boolean') {
+    res.status(400).json({ success: false, error: 'active must be a boolean' });
+    return;
+  }
+  const { rows } = await pool.query(
+    `UPDATE menu_items SET active=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
+    [active, id]
+  );
+  if (!rows[0]) {
+    res.status(404).json({ success: false, error: 'Item not found' });
+    return;
+  }
+  res.json({ success: true, data: rows[0] });
+});
+
 export default router;

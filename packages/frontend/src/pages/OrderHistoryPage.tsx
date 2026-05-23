@@ -13,7 +13,7 @@ const fmtLabel = (s: string) =>
 const PRINTABLE_STATUSES: OrderStatus[] = ['open', 'in_progress', 'ready', 'served', 'paid'];
 
 function printReceipt(order: Order) {
-  const fmt = (n: number | unknown) => `$${parseFloat(n as string).toFixed(2)}`;
+  const fmt = (n: number | unknown) => `Rs. ${parseFloat(n as string).toFixed(2)}`;
   const date = format(parseISO(order.created_at), 'dd MMM yyyy HH:mm');
 
   const itemRows = order.items
@@ -239,7 +239,7 @@ function OrderRow({
             </button>
           )}
           <div className="text-right">
-            <p className="text-base font-bold text-brand-400">${parseFloat(order.total as unknown as string).toFixed(2)}</p>
+            <p className="text-base font-bold text-brand-400">Rs. {parseFloat(order.total as unknown as string).toFixed(2)}</p>
             <p className="text-xs text-gray-500">
               {formatDistanceToNow(parseISO(order.created_at), { addSuffix: true })}
             </p>
@@ -259,7 +259,7 @@ function OrderRow({
                 </span>
                 <div className="flex items-center gap-3">
                   <span className={STATUS_BADGE[item.status]}>{fmtLabel(item.status)}</span>
-                  <span className="text-gray-400">${(parseFloat(item.unit_price as unknown as string) * item.quantity).toFixed(2)}</span>
+                  <span className="text-gray-400">Rs. {(parseFloat(item.unit_price as unknown as string) * item.quantity).toFixed(2)}</span>
                 </div>
               </div>
             ))}
@@ -267,13 +267,13 @@ function OrderRow({
 
           {/* Totals summary */}
           <div className="pt-2 border-t border-gray-800 text-xs space-y-1 text-gray-400">
-            <div className="flex justify-between"><span>Subtotal</span><span>${parseFloat(order.subtotal as unknown as string).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Subtotal</span><span>Rs. {parseFloat(order.subtotal as unknown as string).toFixed(2)}</span></div>
             {parseFloat(order.discount_amount as unknown as string) > 0 && (
-              <div className="flex justify-between text-green-400"><span>Discount</span><span>-${parseFloat(order.discount_amount as unknown as string).toFixed(2)}</span></div>
+              <div className="flex justify-between text-green-400"><span>Discount</span><span>-Rs. {parseFloat(order.discount_amount as unknown as string).toFixed(2)}</span></div>
             )}
-            <div className="flex justify-between"><span>Service charge</span><span>${parseFloat(order.service_charge_amount as unknown as string).toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Tax</span><span>${parseFloat(order.tax_amount as unknown as string).toFixed(2)}</span></div>
-            <div className="flex justify-between font-bold text-white text-sm pt-1"><span>Total</span><span className="text-brand-400">${parseFloat(order.total as unknown as string).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Service charge</span><span>Rs. {parseFloat(order.service_charge_amount as unknown as string).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Tax</span><span>Rs. {parseFloat(order.tax_amount as unknown as string).toFixed(2)}</span></div>
+            <div className="flex justify-between font-bold text-white text-sm pt-1"><span>Total</span><span className="text-brand-400">Rs. {parseFloat(order.total as unknown as string).toFixed(2)}</span></div>
           </div>
 
           {/* Actions */}

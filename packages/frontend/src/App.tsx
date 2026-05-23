@@ -9,6 +9,7 @@ import InventoryPage from './pages/InventoryPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import UsersPage from './pages/UsersPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
+import MenuPage from './pages/MenuPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuth = useAuthStore((s) => s.isAuthenticated());
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="orders" element={<OrderHistoryPage />} />
+          <Route path="menu" element={<MenuPage />} />
           <Route path="users" element={<UsersPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -10,7 +10,7 @@ import api from '../services/api';
 import { BarChart3, TrendingUp, ShoppingCart, DollarSign, Download, Users } from 'lucide-react';
 
 function fmt(n: number | string) {
-  return `$${parseFloat(n as string).toFixed(2)}`;
+  return `Rs. ${parseFloat(n as string).toFixed(2)}`;
 }
 
 function StatCard({ label, value, icon: Icon, color }: {

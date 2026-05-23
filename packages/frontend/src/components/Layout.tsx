@@ -11,6 +11,7 @@ import {
   LogOut,
   Wifi,
   WifiOff,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useRealtimeStore } from '../store/realtimeStore';
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { to: '/pos', icon: ShoppingCart, label: 'POS', roles: ['admin', 'manager', 'cashier'] },
   { to: '/kds', icon: ChefHat, label: 'Kitchen', roles: ['admin', 'manager', 'kitchen'] },
   { to: '/tables', icon: LayoutGrid, label: 'Tables', roles: ['admin', 'manager', 'cashier'] },
+  { to: '/menu', icon: UtensilsCrossed, label: 'Menu', roles: ['admin', 'manager', 'kitchen'] },
   { to: '/inventory', icon: Package, label: 'Inventory', roles: ['admin', 'manager'] },
   { to: '/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin', 'manager'] },
   { to: '/orders', icon: ClipboardList, label: 'Orders', roles: ['admin', 'manager', 'cashier'] },
