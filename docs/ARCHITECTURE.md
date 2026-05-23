@@ -35,7 +35,7 @@ Vite + React 18 SPA.
 | Layer | Responsibility |
 |-------|---------------|
 | `store/authStore.ts` | Persisted JWT + user via Zustand + `persist` middleware |
-| `store/realtimeStore.ts` | All live state (orders, tables, low-stock) driven by WS events |
+| `store/realtimeStore.ts` | All live state (orders, tables, `menuItemOverrides`) driven by WS events |
 | `hooks/useWebSocket.ts` | Connects to WS with auth token, reconnects with exponential backoff, delivers snapshot on connect |
 | `services/api.ts` | Axios instance with JWT interceptor and 401 → logout |
 | `components/Layout.tsx` | Sidebar nav, WS status indicator, global notification sound |
@@ -210,8 +210,9 @@ interface WsEvent<T> {
 | `order:updated` | `{ order: Order }` | Item status change, add items |
 | `order:status_changed` | `{ order_id, old_status, new_status, updated_by }` | PATCH /orders/:id/status |
 | `order_item:status_changed` | `{ order_id, item_id, old_status, new_status, updated_by }` | PATCH /orders/:id/items/:id/status |
-| `table:status_changed` | `{ table_id, old_status, new_status }` | PATCH /tables/:id/status |
+| `table:status_changed` | `{ table_id, old_status, new_status }` | PATCH /tables/:id/status, order served/voided/paid |
 | `inventory:low_stock` | `{ item: InventoryItem }` | Inventory drops below threshold |
+| `menu:item_updated` | `{ item: MenuItem }` | PATCH /menu/items/:id/availability |
 | `ping` / `pong` | `{}` | Heartbeat |
 
 ---

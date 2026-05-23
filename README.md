@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/Nishan-noob/mise/main/docs/assets/mise-banner.png" alt="Mise Banner" width="800" />
-
 # mise
 
 ### Real-Time Restaurant & Kitchen Management System
@@ -29,14 +27,15 @@
 
 | Module | Highlights |
 |--------|-----------|
-| 🛒 **POS** | Dine-in / takeaway / delivery orders · Item modifiers & notes · Quantity editing · Discount, tax, service charge · Split & merge tickets |
+| 🛒 **POS** | Dine-in / takeaway / delivery orders · Item modifiers & notes · Quantity editing · Discount, tax, service charge · Split & merge tickets · Blocked items shown as disabled |
 | 👨‍🍳 **Kitchen Display (KDS)** | Live order tickets per station (grill / fry / bar / cold / pastry) · Status pipeline: New → Accepted → In Progress → Ready → Served · Elapsed-time display with priority alerts |
-| ⚡ **Real-Time Engine** | WebSocket events for every state change · Snapshot resync on reconnect · Offline-safe draft order queue |
+| ⚡ **Real-Time Engine** | WebSocket events for every state change · Snapshot resync on reconnect · Live menu block propagation · Offline-safe draft order queue |
 | 📦 **Inventory** | Ingredient-level stock tracking · Auto-deduction on order completion · Low-stock alerts via WebSocket push |
 | 📊 **Analytics** | Real-time sales totals · Item & category performance · Hourly trend chart · Staff throughput · End-of-day CSV export |
 | 🔒 **Roles & Permissions** | Admin · Manager · Cashier · Kitchen — route and action guards enforced per role |
 | 🗃️ **Audit Log** | Full order event timeline (who changed what and when) |
-| 🪑 **Table Management** | Occupancy view · Status transitions · Active order badge per table |
+| 🪑 **Table Management** | Occupancy view · Status transitions · Active order badge per table · Real-time clear on void/serve |
+| 🍽️ **Menu Management** | Add / edit / delete items (admin & manager) · Block / unblock items live (kitchen) · Changes propagate to POS instantly via WebSocket |
 | 🖨️ **Extras** | Printer-ready kitchen ticket view · Sound + visual alert on new KDS order · Table floor plans |
 
 ---
@@ -219,8 +218,7 @@ packages/
         └── pages/
             ├── LoginPage.tsx
             ├── POSPage.tsx
-            ├── KDSPage.tsx
-            ├── TablesPage.tsx
+            ├── KDSPage.tsx            ├── MenuPage.tsx            ├── TablesPage.tsx
             ├── InventoryPage.tsx
             ├── AnalyticsPage.tsx
             ├── OrderHistoryPage.tsx
