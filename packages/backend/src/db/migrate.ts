@@ -1,16 +1,14 @@
-import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import { getPool } from '../config/database';
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
-async function migrate() {
+export async function runMigrations() {
   const pool = getPool();
   const client = await pool.connect();
 
   try {
-    // Ensure migrations table exists
     await client.query(`
       CREATE TABLE IF NOT EXISTS migrations (
         id SERIAL PRIMARY KEY,
@@ -52,11 +50,14 @@ async function migrate() {
     console.log('[MIGRATE] All migrations applied.');
   } finally {
     client.release();
-    await pool.end();
   }
 }
 
-migrate().catch((err) => {
-  console.error('[MIGRATE] Fatal:', err);
-  process.exit(1);
-});
+// CLI entrypoint: tsx src/db/migrate.ts
+if (require.main === module) {
+  import('dotenv/config').then(() => {
+    runMigrations()
+      .then(() => process.exit(0))
+      .catch((err) => { console.error('[MIGRATE] Fatal:', err); process.exit(1); });
+  });
+}

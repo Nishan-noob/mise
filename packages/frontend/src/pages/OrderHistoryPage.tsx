@@ -3,8 +3,97 @@ import { useState } from 'react';
 import { Order, OrderStatus } from '@mise/shared';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { ClipboardList, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { ClipboardList, CheckCircle, XCircle, Printer } from 'lucide-react';
+import { formatDistanceToNow, parseISO, format } from 'date-fns';
+
+const PRINTABLE_STATUSES: OrderStatus[] = ['open', 'in_progress', 'ready', 'served', 'paid'];
+
+function printReceipt(order: Order) {
+  const fmt = (n: number | unknown) => `$${parseFloat(n as string).toFixed(2)}`;
+  const date = format(parseISO(order.created_at), 'dd MMM yyyy HH:mm');
+
+  const itemRows = order.items
+    .filter((i) => i.status !== 'voided')
+    .map((item) => {
+      const modLine = item.modifiers?.length
+        ? `<div style="color:#666;font-size:11px;padding-left:12px">${item.modifiers.map((m) => `+ ${m.modifier_name}${parseFloat(m.price_delta as unknown as string) ? ` (${fmt(m.price_delta)})` : ''}`).join(', ')}</div>`
+        : '';
+      const noteLine = item.notes
+        ? `<div style="color:#888;font-size:11px;font-style:italic;padding-left:12px">Note: ${item.notes}</div>`
+        : '';
+      return `
+        <tr>
+          <td style="padding:3px 0;vertical-align:top">
+            <div>${item.quantity} × ${item.menu_item_name}</div>
+            ${modLine}${noteLine}
+          </td>
+          <td style="padding:3px 0;text-align:right;vertical-align:top;white-space:nowrap">${fmt(parseFloat(item.unit_price as unknown as string) * item.quantity)}</td>
+        </tr>`;
+    })
+    .join('');
+
+  const discountRow = parseFloat(order.discount_amount as unknown as string) > 0
+    ? `<tr><td style="color:#888">Discount (${order.discount_pct}%)</td><td style="text-align:right;color:#888">-${fmt(order.discount_amount)}</td></tr>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Receipt #${order.id}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Courier New', monospace; font-size: 13px; width: 300px; margin: 0 auto; padding: 16px 8px; color: #111; }
+    h1 { text-align: center; font-size: 20px; letter-spacing: 3px; margin-bottom: 2px; }
+    .sub { text-align: center; font-size: 11px; color: #555; margin-bottom: 12px; }
+    .divider { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    td { font-size: 12px; }
+    .totals td { padding: 2px 0; }
+    .total-line td { font-weight: bold; font-size: 14px; border-top: 1px dashed #999; padding-top: 6px; margin-top: 4px; }
+    .footer { text-align: center; font-size: 11px; color: #777; margin-top: 14px; }
+    .badge { display:inline-block; background:#eee; padding: 1px 6px; border-radius: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+    @media print { @page { margin: 0; size: 80mm auto; } }
+  </style>
+</head>
+<body>
+  <h1>mise</h1>
+  <div class="sub">Restaurant Management System</div>
+  <hr class="divider"/>
+  <table><tbody>
+    <tr><td>Order</td><td style="text-align:right"><strong>#${order.id}</strong></td></tr>
+    <tr><td>Date</td><td style="text-align:right">${date}</td></tr>
+    <tr><td>Type</td><td style="text-align:right"><span class="badge">${order.type.replace('_', ' ')}</span></td></tr>
+    ${order.table_name ? `<tr><td>Table</td><td style="text-align:right">${order.table_name}</td></tr>` : ''}
+    ${order.customer_name ? `<tr><td>Customer</td><td style="text-align:right">${order.customer_name}</td></tr>` : ''}
+    <tr><td>Status</td><td style="text-align:right"><span class="badge">${order.status}</span></td></tr>
+  </tbody></table>
+  <hr class="divider"/>
+  <table><tbody>${itemRows}</tbody></table>
+  <hr class="divider"/>
+  <table class="totals"><tbody>
+    <tr><td>Subtotal</td><td style="text-align:right">${fmt(order.subtotal)}</td></tr>
+    ${discountRow}
+    <tr><td>Service (${order.service_charge_pct}%)</td><td style="text-align:right">${fmt(order.service_charge_amount)}</td></tr>
+    <tr><td>Tax (${order.tax_pct}%)</td><td style="text-align:right">${fmt(order.tax_amount)}</td></tr>
+  </tbody></table>
+  <table><tbody>
+    <tr class="total-line"><td>TOTAL</td><td style="text-align:right">${fmt(order.total)}</td></tr>
+  </tbody></table>
+  ${order.notes ? `<hr class="divider"/><div style="font-size:11px;color:#555">Notes: ${order.notes}</div>` : ''}
+  <div class="footer">
+    <p>Thank you for dining with us!</p>
+    <p style="margin-top:4px">Powered by mise</p>
+  </div>
+  <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }</script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=380,height=600,menubar=no,toolbar=no');
+  if (!win) { toast.error('Allow pop-ups to print receipts'); return; }
+  win.document.write(html);
+  win.document.close();
+}
 
 const STATUS_BADGE: Record<string, string> = {
   draft: 'badge-gray',
@@ -114,6 +203,7 @@ function OrderRow({
   onPay: (method: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const canPrint = PRINTABLE_STATUSES.includes(order.status);
 
   return (
     <div className="card overflow-hidden">
@@ -128,11 +218,22 @@ function OrderRow({
           {order.table_name && <span className="text-xs text-gray-400">{order.table_name}</span>}
           {order.customer_name && <span className="text-xs text-gray-400">· {order.customer_name}</span>}
         </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-base font-bold text-brand-400">${parseFloat(order.total as unknown as string).toFixed(2)}</p>
-          <p className="text-xs text-gray-500">
-            {formatDistanceToNow(parseISO(order.created_at), { addSuffix: true })}
-          </p>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {canPrint && (
+            <button
+              onClick={(e) => { e.stopPropagation(); printReceipt(order); }}
+              title="Print receipt"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+          )}
+          <div className="text-right">
+            <p className="text-base font-bold text-brand-400">${parseFloat(order.total as unknown as string).toFixed(2)}</p>
+            <p className="text-xs text-gray-500">
+              {formatDistanceToNow(parseISO(order.created_at), { addSuffix: true })}
+            </p>
+          </div>
         </div>
       </div>
 

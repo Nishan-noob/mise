@@ -1,15 +1,13 @@
-import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
 import { getPool } from '../config/database';
 
-async function seed() {
+export async function runSeed() {
   const pool = getPool();
   const client = await pool.connect();
 
   try {
-    // Re-run seed file (idempotent via ON CONFLICT DO NOTHING)
     console.log('[SEED] Running seed file...');
-    const fs = require('fs');
-    const path = require('path');
     const sql = fs.readFileSync(
       path.join(__dirname, 'migrations', '002_seed.sql'),
       'utf8'
@@ -18,11 +16,14 @@ async function seed() {
     console.log('[SEED] ✓ Seed data applied');
   } finally {
     client.release();
-    await pool.end();
   }
 }
 
-seed().catch((err) => {
-  console.error('[SEED] Fatal:', err);
-  process.exit(1);
-});
+// CLI entrypoint: tsx src/db/seed.ts
+if (require.main === module) {
+  import('dotenv/config').then(() => {
+    runSeed()
+      .then(() => process.exit(0))
+      .catch((err) => { console.error('[SEED] Fatal:', err); process.exit(1); });
+  });
+}
